@@ -1,0 +1,9 @@
+[submodule "third-party/stx-btree"]
+	path = third-party/stx-btree
+	url = git@github.com:bingmann/stx-btree.git
+[submodule "third-party/path_decomposed_tries"]
+	path = third-party/path_decomposed_tries
+	url = git@github.com:ot/path_decomposed_tries.git
+[submodule "third-party/tx-trie"]
+	path = third-party/tx-trie
+	url = git@github.com:hillbig/tx-trie.git

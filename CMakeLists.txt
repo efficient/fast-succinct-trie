@@ -4,6 +4,7 @@ project(fast-succinct-trie)
 message(STATUS "Configuring..." ${CMAKE_PROJECT_NAME})
 
 add_subdirectory(fst)
+#add_subdirectory(fst-serialized)
 add_subdirectory(benchmark)
 add_subdirectory(third-party/art)
 #add_subdirectory(third-party/tx-trie)

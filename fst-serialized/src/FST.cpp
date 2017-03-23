@@ -223,13 +223,8 @@ FST* load(vector<string> &keys, vector<uint64_t> &values, int longestKeyLen) {
     uint32_t valUmem = vallenU * 8;
 
     uint32_t cUnbits = cUmem * 8;
-    uint32_t cUbasicBlockCount = cUnbits / kBasicBlockSizeU;
-
     uint32_t tUnbits = tUmem * 8;
-    uint32_t tUbasicBlockCount = tUnbits / kBasicBlockSizeU;
-
     uint32_t oUnbits = oUmem * 8;
-    uint32_t oUbasicBlockCount = oUnbits / kBasicBlockSizeU;
 
     uint32_t cmem = 0;    
     uint32_t tmem = 0;
@@ -257,7 +252,6 @@ FST* load(vector<string> &keys, vector<uint64_t> &values, int longestKeyLen) {
     smem *= 8;
 
     uint32_t tnbits = tmem * 8;
-    uint32_t tbasicBlockCount = tnbits / kBasicBlockSize;
     uint32_t snbits = smem * 8;
 
     uint32_t wordCount = snbits / kWordSize;
@@ -285,14 +279,14 @@ FST* load(vector<string> &keys, vector<uint64_t> &values, int longestKeyLen) {
     uint32_t sselectLUTCount = spCount / skip + 1;
 
     //-------------------------------------------------
-    uint32_t totalMem = cUmem + cUbasicBlockCount * sizeof(uint32_t) + tUmem + tUbasicBlockCount * sizeof(uint32_t) + oUmem + oUbasicBlockCount * sizeof(uint32_t) + cmem + tmem + tbasicBlockCount * sizeof(uint32_t) + smem + (sselectLUTCount + 1) * sizeof(uint32_t) + valUmem + valmem;
+    uint32_t totalMem = cUmem + (cUnbits / kBasicBlockSizeU) * sizeof(uint32_t) + tUmem + (tUnbits / kBasicBlockSizeU) * sizeof(uint32_t) + oUmem + (oUnbits / kBasicBlockSizeU) * sizeof(uint32_t) + cmem + tmem + (tnbits / kBasicBlockSize) * sizeof(uint32_t) + smem + (sselectLUTCount + 1) * sizeof(uint32_t) + valUmem + valmem;
 
     void* ptr = malloc(sizeof(FST) + totalMem);
     memset(ptr, 0, sizeof(FST) + totalMem);
     FST* fst = new(ptr) FST(cutoff_level, tree_height, first_value_pos, last_value_pos, 
-			    nodeCountU, childCountU, cUmem, cUbasicBlockCount,
-			    tUmem, tUbasicBlockCount, oUmem, oUbasicBlockCount,
-			    valUmem, cmem, tmem, tbasicBlockCount, 
+			    nodeCountU, childCountU, 
+			    cUnbits, cUmem, tUnbits, tUmem, oUnbits, oUmem,
+			    valUmem, cmem, tnbits, tmem, 
 			    smem, sselectLUTCount, valmem);
 
     //-------------------------------------------------
@@ -422,27 +416,27 @@ FST* load(vector<uint64_t> &keys, vector<uint64_t> &values) {
 FST::FST() 
     : cutoff_level_(0), tree_height_(0), first_value_pos_(0),
       last_value_pos_(0), nodeCountU_(0), childCountU_(0),
-      cUnbits_(0), cUpCount_(0), cUmem_(0), cUbasicBlockCount_(0),
-      tUnbits_(0), tUpCount_(0), tUmem_(0), tUbasicBlockCount_(0),
-      oUnbits_(0), oUpCount_(0), oUmem_(0), oUbasicBlockCount_(0),
+      cUnbits_(0), cUpCount_(0), cUmem_(0),
+      tUnbits_(0), tUpCount_(0), tUmem_(0),
+      oUnbits_(0), oUpCount_(0), oUmem_(0),
       valUmem_(0),
       cmem_(0),
-      tnbits_(0), tpCount_(0), tmem_(0), tbasicBlockCount_(0),
+      tnbits_(0), tpCount_(0), tmem_(0),
       snbits_(0), spCount_(0), smem_(0), sselectLUTCount_(0),
       valmem_(0) {}
 
 FST::FST(int16_t cl, uint16_t th, int8_t fvp, int32_t lvp, uint32_t ncu, uint32_t ccu,
-	 uint32_t cUmem, uint32_t cUbbc, uint32_t tUmem, uint32_t tUbbc,
-	 uint32_t oUmem, uint32_t oUbbc, uint32_t vUm, uint32_t cmem,
-	 uint32_t tmem, uint32_t tbbc, uint32_t smem, uint32_t sbbc, uint32_t vm) 
+	 uint32_t cUnb, uint32_t cUmem, uint32_t tUnb, uint32_t tUmem,
+	 uint32_t oUnb, uint32_t oUmem, uint32_t vUm, uint32_t cmem,
+	 uint32_t tnb, uint32_t tmem, uint32_t smem, uint32_t sbbc, uint32_t vm) 
     : cutoff_level_(cl), tree_height_(th), first_value_pos_(fvp),
       last_value_pos_(lvp), nodeCountU_(ncu), childCountU_(ccu),
-      cUnbits_(0), cUpCount_(0), cUmem_(cUmem), cUbasicBlockCount_(cUbbc),
-      tUnbits_(0), tUpCount_(0), tUmem_(tUmem), tUbasicBlockCount_(tUbbc),
-    oUnbits_(0), oUpCount_(0), oUmem_(oUmem), oUbasicBlockCount_(oUbbc),
+      cUnbits_(cUnb), cUpCount_(0), cUmem_(cUmem),
+      tUnbits_(tUnb), tUpCount_(0), tUmem_(tUmem),
+    oUnbits_(oUnb), oUpCount_(0), oUmem_(oUmem),
     valUmem_(vUm),
     cmem_(cmem),
-    tnbits_(0), tpCount_(0), tmem_(tmem), tbasicBlockCount_(tbbc),
+    tnbits_(tnb), tpCount_(0), tmem_(tmem),
     snbits_(0), spCount_(0), smem_(smem), sselectLUTCount_(sbbc),
     valmem_(vm) {}
 
@@ -450,22 +444,22 @@ FST::~FST() {}
 
 //stat
 uint32_t FST::cMemU() { return cUmem_; }
-uint32_t FST::cRankMemU() { return cUbasicBlockCount_ * sizeof(uint32_t); }
+uint32_t FST::cRankMemU() { return (cUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t); }
 uint32_t FST::tMemU() { return tUmem_; }
-uint32_t FST::tRankMemU() { return tUbasicBlockCount_ * sizeof(uint32_t); }
+uint32_t FST::tRankMemU() { return (tUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t); }
 uint32_t FST::oMemU() { return oUmem_;}
-uint32_t FST::oRankMemU() { return oUbasicBlockCount_ * sizeof(uint32_t); }
+uint32_t FST::oRankMemU() { return (oUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t); }
 uint32_t FST::valueMemU() { return valUmem_; }
 
 uint64_t FST::cMem() { return cmem_; }
 uint32_t FST::tMem() { return tmem_; }
-uint32_t FST::tRankMem() { return tbasicBlockCount_ * sizeof(uint32_t); }
+uint32_t FST::tRankMem() { return (tnbits_ / kBasicBlockSize) * sizeof(uint32_t); }
 uint32_t FST::sMem() { return smem_;}
 uint32_t FST::sSelectMem() { return (sselectLUTCount_ + 1) * sizeof(uint32_t); }
 uint64_t FST::valueMem() { return valmem_; }
 
 uint64_t FST::mem() {
-    return sizeof(FST) + cUmem_ + cUbasicBlockCount_ * sizeof(uint32_t) + tUmem_ + tUbasicBlockCount_ * sizeof(uint32_t) + oUmem_ + oUbasicBlockCount_ * sizeof(uint32_t) + cmem_ + tmem_ + tbasicBlockCount_ * sizeof(uint32_t) + smem_ + (sselectLUTCount_ + 1) * sizeof(uint32_t) + valUmem_ + valmem_;
+    return sizeof(FST) + cUmem_ + (cUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + tUmem_ + (tUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + oUmem_ + (oUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + cmem_ + tmem_ + (tnbits_ / kBasicBlockSize) * sizeof(uint32_t) + smem_ + (sselectLUTCount_ + 1) * sizeof(uint32_t) + valUmem_ + valmem_;
 }
 
 //******************************************************
@@ -474,18 +468,16 @@ uint64_t FST::mem() {
 //*******************************************************************
 inline void FST::cUinit(uint64_t* bits, uint32_t nbits) {
     cUnbits_ = nbits;
-    cUbasicBlockCount_ = cUnbits_ / kBasicBlockSizeU;
-
     uint32_t* cUrankLUT = cUrankLUT_();
 
     uint32_t rankCum = 0;
-    for (uint32_t i = 0; i < cUbasicBlockCount_; i++) {
+    for (uint32_t i = 0; i < (cUnbits_ / kBasicBlockSizeU); i++) {
 	cUrankLUT[i] = rankCum;
 	rankCum += popcountLinear(bits, 
 				  i * kWordCountPerBasicBlockU, 
 				  kBasicBlockSizeU);
     }
-    cUrankLUT[cUbasicBlockCount_-1] = rankCum;
+    cUrankLUT[(cUnbits_ / kBasicBlockSizeU)-1] = rankCum;
 
     cUpCount_ = rankCum;
 }
@@ -506,18 +498,16 @@ inline uint32_t FST::cUrank(uint32_t pos) {
 //*******************************************************************
 inline void FST::tUinit(uint64_t* bits, uint32_t nbits) {
     tUnbits_ = nbits;
-    tUbasicBlockCount_ = tUnbits_ / kBasicBlockSizeU;
-
     uint32_t* tUrankLUT = tUrankLUT_();
 
     uint32_t rankCum = 0;
-    for (uint32_t i = 0; i < tUbasicBlockCount_; i++) {
+    for (uint32_t i = 0; i < (tUnbits_ / kBasicBlockSizeU); i++) {
 	tUrankLUT[i] = rankCum;
 	rankCum += popcountLinear(bits, 
 				  i * kWordCountPerBasicBlockU, 
 				  kBasicBlockSizeU);
     }
-    tUrankLUT[tUbasicBlockCount_-1] = rankCum;
+    tUrankLUT[(tUnbits_ / kBasicBlockSizeU)-1] = rankCum;
 
     tUpCount_ = rankCum;
 }
@@ -538,18 +528,16 @@ inline uint32_t FST::tUrank(uint32_t pos) {
 //*******************************************************************
 inline void FST::oUinit(uint64_t* bits, uint32_t nbits) {
     oUnbits_ = nbits;
-    oUbasicBlockCount_ = oUnbits_ / kBasicBlockSizeU;
-
     uint32_t* oUrankLUT = oUrankLUT_();
 
     uint32_t rankCum = 0;
-    for (uint32_t i = 0; i < oUbasicBlockCount_; i++) {
+    for (uint32_t i = 0; i < (oUnbits_ / kBasicBlockSizeU); i++) {
 	oUrankLUT[i] = rankCum;
 	rankCum += popcountLinear(bits, 
 				  i * kWordCountPerBasicBlockU, 
 				  kBasicBlockSizeU);
     }
-    oUrankLUT[oUbasicBlockCount_-1] = rankCum;
+    oUrankLUT[(tUnbits_ / kBasicBlockSizeU)-1] = rankCum;
 
     oUpCount_ = rankCum;
 }
@@ -570,18 +558,16 @@ inline uint32_t FST::oUrank(uint32_t pos) {
 //*******************************************************************
 inline void FST::tinit(uint64_t* bits, uint32_t nbits) {
     tnbits_ = nbits;    
-    tbasicBlockCount_ = tnbits_ / kBasicBlockSize;
-
     uint32_t* trankLUT = trankLUT_();
 
     uint32_t rankCum = 0;
-    for (uint32_t i = 0; i < tbasicBlockCount_; i++) {
+    for (uint32_t i = 0; i < (tnbits_ / kBasicBlockSize); i++) {
 	trankLUT[i] = rankCum;
 	rankCum += popcountLinear(bits, 
 				  i * kWordCountPerBasicBlock, 
 				  kBasicBlockSize);
     }
-    trankLUT[tbasicBlockCount_-1] = rankCum;
+    trankLUT[(tnbits_ / kBasicBlockSize)-1] = rankCum;
 
     tpCount_ = rankCum;
 }
@@ -664,27 +650,27 @@ inline uint64_t* FST::cUbits_() {return (uint64_t*)data_;}
 
 inline uint32_t* FST::cUrankLUT_() {return (uint32_t*)(data_ + cUmem_);}
 
-inline uint64_t* FST::tUbits_() {return (uint64_t*)(data_ + cUmem_ + cUbasicBlockCount_ * sizeof(uint32_t));}
+inline uint64_t* FST::tUbits_() {return (uint64_t*)(data_ + cUmem_ + (cUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t));}
 
-inline uint32_t* FST::tUrankLUT_() {return (uint32_t*)(data_ + cUmem_ + cUbasicBlockCount_ * sizeof(uint32_t) + tUmem_);}
+inline uint32_t* FST::tUrankLUT_() {return (uint32_t*)(data_ + cUmem_ + (cUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + tUmem_);}
 
-inline uint64_t* FST::oUbits_() {return (uint64_t*)(data_ + cUmem_ + cUbasicBlockCount_ * sizeof(uint32_t) + tUmem_ + tUbasicBlockCount_ * sizeof(uint32_t));}
+inline uint64_t* FST::oUbits_() {return (uint64_t*)(data_ + cUmem_ + (cUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + tUmem_ + (tUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t));}
 
-inline uint32_t* FST::oUrankLUT_() {return (uint32_t*)(data_ + cUmem_ + cUbasicBlockCount_ * sizeof(uint32_t) + tUmem_ + tUbasicBlockCount_ * sizeof(uint32_t) + oUmem_);}
+inline uint32_t* FST::oUrankLUT_() {return (uint32_t*)(data_ + cUmem_ + (cUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + tUmem_ + (tUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + oUmem_);}
 
-inline uint8_t* FST::cbytes_() {return (uint8_t*)(data_ + cUmem_ + cUbasicBlockCount_ * sizeof(uint32_t) + tUmem_ + tUbasicBlockCount_ * sizeof(uint32_t) + oUmem_ + oUbasicBlockCount_ * sizeof(uint32_t));}
+inline uint8_t* FST::cbytes_() {return (uint8_t*)(data_ + cUmem_ + (cUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + tUmem_ + (tUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + oUmem_ + (oUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t));}
 
-inline uint64_t* FST::tbits_() {return (uint64_t*)(data_ + cUmem_ + cUbasicBlockCount_ * sizeof(uint32_t) + tUmem_ + tUbasicBlockCount_ * sizeof(uint32_t) + oUmem_ + oUbasicBlockCount_ * sizeof(uint32_t) + cmem_);}
+inline uint64_t* FST::tbits_() {return (uint64_t*)(data_ + cUmem_ + (cUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + tUmem_ + (tUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + oUmem_ + (oUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + cmem_);}
 
-inline uint32_t* FST::trankLUT_() {return (uint32_t*)(data_ + cUmem_ + cUbasicBlockCount_ * sizeof(uint32_t) + tUmem_ + tUbasicBlockCount_ * sizeof(uint32_t) + oUmem_ + oUbasicBlockCount_ * sizeof(uint32_t) + cmem_ + tmem_);}
+inline uint32_t* FST::trankLUT_() {return (uint32_t*)(data_ + cUmem_ + (cUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + tUmem_ + (tUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + oUmem_ + (oUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + cmem_ + tmem_);}
 
-inline uint64_t* FST::sbits_() {return (uint64_t*)(data_ + cUmem_ + cUbasicBlockCount_ * sizeof(uint32_t) + tUmem_ + tUbasicBlockCount_ * sizeof(uint32_t) + oUmem_ + oUbasicBlockCount_ * sizeof(uint32_t) + cmem_ + tmem_ + tbasicBlockCount_ * sizeof(uint32_t));}
+inline uint64_t* FST::sbits_() {return (uint64_t*)(data_ + cUmem_ + (cUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + tUmem_ + (tUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + oUmem_ + (oUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + cmem_ + tmem_ + (tnbits_ / kBasicBlockSize) * sizeof(uint32_t));}
 
-inline uint32_t* FST::sselectLUT_() {return (uint32_t*)(data_ + cUmem_ + cUbasicBlockCount_ * sizeof(uint32_t) + tUmem_ + tUbasicBlockCount_ * sizeof(uint32_t) + oUmem_ + oUbasicBlockCount_ * sizeof(uint32_t) + cmem_ + tmem_ + tbasicBlockCount_ * sizeof(uint32_t) + smem_);}
+inline uint32_t* FST::sselectLUT_() {return (uint32_t*)(data_ + cUmem_ + (cUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + tUmem_ + (tUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + oUmem_ + (oUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + cmem_ + tmem_ + (tnbits_ / kBasicBlockSize) * sizeof(uint32_t) + smem_);}
 
-inline uint64_t* FST::valuesU_() {return (uint64_t*)(data_ + cUmem_ + cUbasicBlockCount_ * sizeof(uint32_t) + tUmem_ + tUbasicBlockCount_ * sizeof(uint32_t) + oUmem_ + oUbasicBlockCount_ * sizeof(uint32_t) + cmem_ + tmem_ + tbasicBlockCount_ * sizeof(uint32_t) + smem_ + (sselectLUTCount_ + 1) * sizeof(uint32_t));}
+inline uint64_t* FST::valuesU_() {return (uint64_t*)(data_ + cUmem_ + (cUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + tUmem_ + (tUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + oUmem_ + (oUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + cmem_ + tmem_ + (tnbits_ / kBasicBlockSize) * sizeof(uint32_t) + smem_ + (sselectLUTCount_ + 1) * sizeof(uint32_t));}
 
-inline uint64_t* FST::values_() {return (uint64_t*)(data_ + cUmem_ + cUbasicBlockCount_ * sizeof(uint32_t) + tUmem_ + tUbasicBlockCount_ * sizeof(uint32_t) + oUmem_ + oUbasicBlockCount_ * sizeof(uint32_t) + cmem_ + tmem_ + tbasicBlockCount_ * sizeof(uint32_t) + smem_ + (sselectLUTCount_ + 1) * sizeof(uint32_t) + valUmem_);}
+inline uint64_t* FST::values_() {return (uint64_t*)(data_ + cUmem_ + (cUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + tUmem_ + (tUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + oUmem_ + (oUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + cmem_ + tmem_ + (tnbits_ / kBasicBlockSize) * sizeof(uint32_t) + smem_ + (sselectLUTCount_ + 1) * sizeof(uint32_t) + valUmem_);}
 
 //******************************************************
 // IS O BIT SET U?

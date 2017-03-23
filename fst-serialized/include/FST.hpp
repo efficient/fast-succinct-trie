@@ -62,9 +62,9 @@ class FST {
 public:
     FST();
     FST(int16_t cl, uint16_t th, int8_t fvp, int32_t lvp, uint32_t ncu, uint32_t ccu,
-	uint32_t cUmem, uint32_t cUbbc, uint32_t tUmem, uint32_t tUbbc,
-	uint32_t oUmem, uint32_t oUbbc, uint32_t vUm, uint32_t cmem,
-	uint32_t tmem, uint32_t tbbc, uint32_t smem, uint32_t sbbc, uint32_t vm);
+	uint32_t cUnb, uint32_t cUmem, uint32_t tUnb, uint32_t tUmem,
+	uint32_t oUnb, uint32_t oUmem, uint32_t vUm, uint32_t cmem,
+	uint32_t tnb, uint32_t tmem, uint32_t smem, uint32_t sbbc, uint32_t vm);
     virtual ~FST();
 
     friend inline bool insertChar_cond(const uint8_t ch, vector<uint8_t> &c, vector<uint64_t> &t, vector<uint64_t> &s, int &pos, int &nc);
@@ -193,19 +193,16 @@ private:
     uint32_t cUnbits_;
     uint32_t cUpCount_;
     uint32_t cUmem_;
-    uint32_t cUbasicBlockCount_;
 
     //D-HasChild
     uint32_t tUnbits_;
     uint32_t tUpCount_;
     uint32_t tUmem_;
-    uint32_t tUbasicBlockCount_;
 
     //D-IsPrefixKey
     uint32_t oUnbits_;
     uint32_t oUpCount_;
     uint32_t oUmem_;
-    uint32_t oUbasicBlockCount_;
 
     //D-values
     uint32_t valUmem_;
@@ -217,7 +214,6 @@ private:
     uint32_t tnbits_;
     uint32_t tpCount_;
     uint32_t tmem_;
-    uint32_t tbasicBlockCount_;
 
     //S-LOUDS
     uint32_t  snbits_;

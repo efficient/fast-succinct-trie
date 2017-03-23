@@ -100,6 +100,7 @@ inline int loadRandInt (vector<uint64_t> &keys) {
 //*****************************************************************
 // FST TESTS
 //*****************************************************************
+
 TEST_F(UnitTest, LookupTest) {
     vector<string> keys;
     vector<uint64_t> values;
@@ -165,18 +166,36 @@ TEST_F(UnitTest, LowerBoundTest) {
 
     printStatFST(index);
 
+    string curkey;
+    char* key_str = new char[8];
+    string keyString;
     FSTIter iter(index);
     for (int i = 0; i < TEST_SIZE_INT - 1; i++) {
 	ASSERT_TRUE(index->lowerBound(keys[i] - 1, iter));
+	curkey = iter.key();
+	reinterpret_cast<uint64_t*>(key_str)[0]=__builtin_bswap64(keys[i]);
+	keyString = string(key_str, 8);
+	auto res = mismatch(curkey.begin(), curkey.end(), keyString.begin());
+	ASSERT_TRUE(res.first == curkey.end());
 	ASSERT_EQ(keys[i], iter.value());
 
 	for (int j = 0; j < RANGE_SIZE; j++) {
 	    if (i+j+1 < TEST_SIZE_INT) {
 		ASSERT_TRUE(iter++);
+		curkey = iter.key();
+		reinterpret_cast<uint64_t*>(key_str)[0]=__builtin_bswap64(keys[i+j+1]);
+		keyString = string(key_str, 8);
+		res = mismatch(curkey.begin(), curkey.end(), keyString.begin());
+		ASSERT_TRUE(res.first == curkey.end());
 		ASSERT_EQ(keys[i+j+1], iter.value());
 	    }
 	    else {
 		ASSERT_FALSE(iter++);
+		curkey = iter.key();
+		reinterpret_cast<uint64_t*>(key_str)[0]=__builtin_bswap64(keys[TEST_SIZE_INT-1]);
+		keyString = string(key_str, 8);
+		res = mismatch(curkey.begin(), curkey.end(), keyString.begin());
+		ASSERT_TRUE(res.first == curkey.end());
 		ASSERT_EQ(keys[TEST_SIZE_INT-1], iter.value());
 	    }
 	}
@@ -191,21 +210,40 @@ TEST_F(UnitTest, UpperBoundTest) {
 
     printStatFST(index);
 
+    string curkey;
+    char* key_str = new char[8];
+    string keyString;
     FSTIter iter(index);
     for (int i = 0; i < TEST_SIZE_INT - 1; i++) {
  	ASSERT_TRUE(index->upperBound(keys[i] + 1, iter));
+	curkey = iter.key();
+	reinterpret_cast<uint64_t*>(key_str)[0]=__builtin_bswap64(keys[i]);
+	keyString = string(key_str, 8);
+	auto res = mismatch(curkey.begin(), curkey.end(), keyString.begin());
+	ASSERT_TRUE(res.first == curkey.end());
 	ASSERT_EQ(keys[i], iter.value());
 
 	for (int j = 0; j < RANGE_SIZE; j++) {
 	    if (i+j+1 < TEST_SIZE_INT) {
 		ASSERT_TRUE(iter++);
+		curkey = iter.key();
+		reinterpret_cast<uint64_t*>(key_str)[0]=__builtin_bswap64(keys[i+j+1]);
+		keyString = string(key_str, 8);
+		res = mismatch(curkey.begin(), curkey.end(), keyString.begin());
+		ASSERT_TRUE(res.first == curkey.end());
 		ASSERT_EQ(keys[i+j+1], iter.value());
 	    }
 	    else {
 		ASSERT_FALSE(iter++);
+		curkey = iter.key();
+		reinterpret_cast<uint64_t*>(key_str)[0]=__builtin_bswap64(keys[TEST_SIZE_INT-1]);
+		keyString = string(key_str, 8);
+		res = mismatch(curkey.begin(), curkey.end(), keyString.begin());
+		ASSERT_TRUE(res.first == curkey.end());
 		ASSERT_EQ(keys[TEST_SIZE_INT-1], iter.value());
 	    }
 	}
+
     }
 }
 

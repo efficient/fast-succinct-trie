@@ -1297,7 +1297,7 @@ inline bool FST::prevNode(int level, uint64_t pos, FSTIter* iter) {
 	uint8_t cc = 0;
 
 	if (kc == 0) {
-	    if (!iter->positions[cur_level].isO) {
+	    if (!iter->positions[cur_level].isO && isObitSetU(nodeNum)) {
 		iter->positions[cur_level].isO = true;
 		inNode = true;
 	    }

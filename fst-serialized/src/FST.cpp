@@ -1243,7 +1243,7 @@ inline bool FST::prevNodeU(int level, uint64_t nodeNum, FSTIter* iter) {
 	kc = iter->positions[cur_level].keyPos & 255;
 
 	if (kc == 0) {
-	    if (!iter->positions[cur_level].isO) {
+	    if (!iter->positions[cur_level].isO && isObitSetU(nodeNum)) {
 		iter->positions[cur_level].isO = true;
 		inNode = true;
 	    }
@@ -1831,7 +1831,7 @@ bool FSTIter::operator -- (int) {
 	    kc = positions[level].keyPos & 255;
 
 	    if (kc == 0) {
-		if (!positions[level].isO) {
+		if (!positions[level].isO && index->isObitSetU(nodeNum)) {
 		    positions[level].isO = true;
 		    inNode = true;
 		}
